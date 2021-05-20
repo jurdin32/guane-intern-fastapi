@@ -1,7 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException
 import requests
-from fastapi_jwt_auth import AuthJWT
 from auth import *
+from celery_worker import createDogs
 from schema import *
 from models import Dog, User
 
@@ -37,7 +37,7 @@ def read_all():
     listado = []
     for d in Dog.select():
         listado.append({"id": d.id, "name": d.name, "picture": d.picture, "create_date": d.create_Date,
-                        "is_adopted": d.is_adopted})
+                        "is_adopted": d.is_adopted,'user_id':d.user_id})
     return {"dogs": listado}
 
 
@@ -47,7 +47,7 @@ def list_adopted():
     listado = []
     for d in Dog.select().where(Dog.is_adopted == True):
         listado.append({"id": d.id, "name": d.name, "picture": d.picture, "create_date": d.create_Date,
-                        "is_adopted": d.is_adopted})
+                        "is_adopted": d.is_adopted,'user_id':d.user_id})
     return {"dogs": listado}
 
 
@@ -58,24 +58,17 @@ def read_name(name: str):
     try:
         d = Dog.get(Dog.name == name)
         data.append({"id": d.id, "name": d.name, "picture": d.picture, "create_date": d.create_Date,
-                     "is_adopted": d.is_adopted})
+                     "is_adopted": d.is_adopted,'user_id':d.user_id})
     except:
         raise HTTPException(status_code=401, detail='No hay mascotas con ese nombre, reintente.!')
     return {"dog": data}
 
+
 #crea una nueva mascota
 @app.post("/api/dogs/{name}")
 def create_dogs(name: str, username=Depends(auth_handler.auth_wrapper)):
-    URL = 'https://dog.ceo/api/breeds/image/random'
-    data = requests.get(URL)
-    data = data.json()
-    dog = Dog.create(
-        name=name,
-        picture=data['message'],
-        is_adopted=False
-    )
-    dog.save()
-    return {'dog': [dog]}
+    createDogs.delay(name,username)
+    return {'dog':'Creando..!'}
 
 #actualiza la mascota
 @app.put("/api/dogs/{name}")
@@ -95,3 +88,5 @@ def update_dogs(name: str, username=Depends(auth_handler.auth_wrapper)):
 def delete_dogs(name: str, username=Depends(auth_handler.auth_wrapper)):
     Dog.delete().where(Dog.name == name).execute()
     return {"dog": "Eliminado..!"}
+
+

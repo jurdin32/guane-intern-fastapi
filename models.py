@@ -2,15 +2,7 @@ import datetime
 from peewee import *
 database = SqliteDatabase('my_app.db')
 
-class Dog(Model):
-    name = CharField()
-    picture = CharField()
-    is_adopted=BooleanField()
-    create_Date=DateTimeField(default=datetime.datetime.now)
 
-    class Meta:
-        database = database
-#database.create_tables([Dog])
 
 class User(Model):
     username=CharField()
@@ -20,3 +12,15 @@ class User(Model):
         database = database
 
 #database.create_tables([User])
+
+
+class Dog(Model):
+    user = ForeignKeyField(User)
+    name = CharField()
+    picture = CharField()
+    is_adopted=BooleanField()
+    create_Date=DateTimeField(default=datetime.datetime.now)
+
+    class Meta:
+        database = database
+database.create_tables([Dog])
